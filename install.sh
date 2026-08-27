@@ -12,7 +12,14 @@
 
 set -euo pipefail
 
-BASE_DIR="/opt/bootsoftware"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "${SCRIPT_DIR}/roi" ] && [ -d "${SCRIPT_DIR}/buildroot-overlay" ]; then
+	BASE_DIR="$SCRIPT_DIR"
+elif [ -d "/opt/bootsoftware/roi" ] && [ -d "/opt/bootsoftware/buildroot-overlay" ]; then
+	BASE_DIR="/opt/bootsoftware"
+else
+	BASE_DIR="$SCRIPT_DIR"
+fi
 ROI_DIR="${BASE_DIR}/roi"
 OVERLAY_DIR="${BASE_DIR}/buildroot-overlay"
 BUILDROOT_DIR="${BASE_DIR}/buildroot"
@@ -32,6 +39,12 @@ if [ ! -d "$ROI_DIR" ] || [ ! -d "$OVERLAY_DIR" ]; then
 	err "Erwarte ${ROI_DIR} und ${OVERLAY_DIR} — bitte erst beide ZIPs dorthin entpacken."
 	exit 1
 fi
+
+# roi/ und buildroot-overlay/ können durch einen früheren `sudo`-Lauf
+# teilweise root gehören (z.B. target/-Ordner von cargo). Immer sauber
+# auf den aktuellen User übergeben, unabhängig vom BASE_DIR selbst.
+log "Stelle sicher, dass ${ROI_DIR} und ${OVERLAY_DIR} dir gehören..."
+sudo chown -R "$(whoami):$(whoami)" "$ROI_DIR" "$OVERLAY_DIR"
 
 # ---------------------------------------------------------------------------
 # 1) System-Abhängigkeiten installieren
